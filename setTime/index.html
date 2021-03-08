@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <button id="debounce">debounce</button>
+  <button id="throttle">throttle</button>
+</body>
+</html>
+<script>
+  // 防抖函数  在一定时间内, 只执行一次, 执行最后一次  控制次数
+  // 适用于监听rem, onresize事件
+  function debounce(fn, delay){
+    let timer;
+    return function(){
+      let context = this
+      let args = arguments
+      if(timer) clearTimeout(timer)
+      timer = setTimeout(()=>{
+        fn.apply(context, args)
+      },delay)
+    }
+  }
+  // 节流函数  在一定时间内, 如果再次触发, 不执行, 控制频率
+  // 下拉获取新数据onscroll
+  function throttle(fn, delay){
+    let timer;
+    return function(){
+      let context = this
+      let args = arguments
+      if(!timer){
+        timer = setTimeout(()=>{
+          fn.apply(context, args)
+          // clearTimeout()  结果为1
+          timer = null
+        },delay)
+      }
+    }
+  }
+  document.getElementById('debounce').onclick=debounce(()=>{
+    console.log(222);
+  },2000)
+  document.getElementById('throttle').onclick=throttle(()=>{
+    console.log(111);
+  },2000)
+  
+</script>

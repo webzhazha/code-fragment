@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  promise
+</body>
+</html>
+<script>
+  // 定义promise类
+  class Mypromise {
+    constructor(executor){
+      // 定义state   'pending' 'fulfilled' 'rejected'
+      // 成功值value 失败值reason  
+      // resolve reject方法
+      this.state = 'pending'
+      this.value = undefined
+      this.reason = undefined
+      // 存储异步then中方法
+      this.onResolveCallBack = []
+      this.onRejectCallBack = []
+      let resolve = (value)=>{
+        // 判断状态 修改状态 赋值
+        if(this.state==='pending'){
+          this.state = 'fulfilled'
+          this.value = value
+          // 循环触发异步事件
+          this.onResolveCallBack.forEach(fn=>{
+            fn()
+          })
+        }
+      }
+      let reject = (value)=> {
+        if(this.state==='pending'){
+          this.state = 'rejected'
+          this.reason = value
+          this.onRejectCallBack.forEach(fn=>{
+            fn()
+          })
+        }
+      }
+      try {
+        executor(resolve, reject)
+      } catch (err) {
+        reject(err)
+      }
+    }
+    then(onFulfilled, onRejected){
+      // 判断then中传入事件
+      onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : value=>value
+      onRejected = typeof onRejected === 'function' ? onRejected : () => { throw err }
+      // 继续使用then  设置promise对象将return的数据resolve 在返回promise
+      let nextPromise = new Mypromise((resolve,reject)=>{
+        // 判断state状态异步触发回调 事件存储
+        if(this.state === 'fulfilled'){
+          setTimeout(()=>{
+            try {
+              let x = onFulfilled(this.value)
+              resolvePromise(this, x, resolve, reject)
+            } catch (err) {
+              reject(err)
+            }
+          },0)
+        }
+        if(this.state === 'rejected'){
+          setTimeout(()=>{
+            try {
+              let x = onRejected(this.reason)
+              resolvePromise(this, x, resolve, reject)
+            } catch (err) {
+              reject(err)
+            }
+          },0)
+        }
+        if(this.state === 'pending'){
+          // 如果是pending状态  存储对应回调
+          this.onResolveCallBack.push(()=>{
+            setTimeout(()=>{
+              try {
+                let x = onFulfilled(this.value)
+                resolvePromise(this, x, resolve, reject)
+              } catch (err) {
+                reject(err)
+              }
+            },0)
+          })
+          this.onRejectCallBack.push(()=>{
+            setTimeout(()=>{
+              try {
+                let x = onRejected(this.reason)
+                resolvePromise(this, x, resolve, reject)
+              } catch (err) {
+                reject(err)
+              }
+            },0)
+          })
+        }
+      })
+      return nextPromise
+    }
+    catch(fn){
+      // catch事件和reject相同
+      this.then(null,fn)
+    }
+  }
+  // Promise.resolve
+  Mypromise.resolve = function(value){
+    return new Mypromise((resolve,reject)=>{
+      resolve(value)
+    })
+  }
+  // Promise.reject
+  Mypromise.reject = function(value){
+    return new Mypromise((resolve,reject)=>{
+      reject(value)
+    })
+  }
+  // Promise.race  优先执行一个
+  Mypromise.race = function(value){
+    // 
+    return new Mypromise((resolve, reject)=>{
+      for(let i = 0; i<value.length; i++){
+        value[i].then(resolve)
+      }
+    })
+  }
+  // Promise.all  返回所有结果
+  Mypromise.all = function(value){
+    let arr = []
+    let index = 0
+    return new Mypromise((resolve,reject)=>{
+      // 收集结果
+      function dep(i, data){
+        arr[i] = data
+        index++
+        if(index===value.length){
+          resolve(arr)
+        }
+      }
+      for(let i=0; i<value.length; i++){
+        value[i].then(res=>{
+          dep(i, res)
+        })
+      }
+    })
+  }
+  function resolvePromise(nextPromise, x, resolve, reject){
+    // 判断x不能为nextPromise  不能自身回调
+    if(nextPromise===x) return
+    let called = false
+    if(called) return
+    called = true
+    // 判断x不能是不是promise对象, 如果是 递归调用resolvePromise
+    if(x!==null && (typeof nextPromise === 'function' || typeof nextPromise === 'object')){
+      try {
+        // 判断返回值x的then参数  默认promise对象
+        let then = x.then
+        if(typeof then === 'function'){
+          // 触发返回值then, 将事件替换resolve, reject
+          then.call(x, y=>{
+            // 得到返回值
+            resolvePromise(nextPromise, y, resolve, reject)
+          },reject)
+        }else {
+          resolve(x)
+        }
+      } catch (err) {
+        reject(err)
+      }
+    }else {
+      resolve(x)
+    }
+  }
+  // const p1 = new Mypromise((resolve, reject)=>{
+  //     resolve(333)
+  // })
+  // const p2 = new Mypromise((resolve, reject)=>{
+  //     resolve(443)
+  // })
+  // Mypromise.all([p1,p2]).then(res=>{
+  //   console.log(res);
+  // })
+  // p.then(res=>{
+  //   console.log(res);
+  //   return 4
+  // }).then(res=>{
+  //   console.log(res);
+  //   return 5
+  // }).then(res=>{
+  //   console.log(res);
+  // })
+  // Mypromise.reject(3).catch(res=>{
+  //   console.log(res);
+  // })
+</script>
